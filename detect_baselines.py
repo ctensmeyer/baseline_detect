@@ -9,7 +9,7 @@ import math
 import scipy.ndimage as nd
 
 
-DEBUG = False
+DEBUG = True
 USE_COL_DETECTION = False
 
 # acceptable image suffixes
@@ -18,7 +18,7 @@ IMAGE_SUFFIXES = ('.jpg', '.jpeg', '.tif', '.tiff', '.png', '.bmp', '.ppm', '.pg
 NET_FILE = os.path.join(os.path.dirname(__file__), "model.prototxt")
 WEIGHTS_FILE = os.path.join(os.path.dirname(__file__), "simple_weights.caffemodel")
 
-TILE_SIZE = 384
+TILE_SIZE = 256
 PADDING_SIZE = 50
 
 # number of subwindows processed by a network in a batch
@@ -730,17 +730,21 @@ def splitBaselines(pred,ccRes,split):
 
 def apply_post_processing(binary, im, simple):
 	ccRes = cv2.connectedComponentsWithStats(binary, 4, cv2.CV_32S)
-	finalPred = linePreprocess(binary, orig, ccRes, simple)
+	finalPred = linePreprocess(binary, im, ccRes, simple)
 	return finalPred
 
-def pred_to_pts(binary):
+def pred_to_pts(pred, simple):
 	global_threshold = 127
 	slice_size = 25
-	small_threshold = 0
-	small_threshold = 2000
+	if simple:
+		small_threshold = 100
+	else:
+		small_threshold = 50
 
 	connectivity = 4
+	ret, binary = cv2.threshold(pred,global_threshold,255,cv2.THRESH_BINARY)
 	output= cv2.connectedComponentsWithStats(binary, connectivity, cv2.CV_32S)
+	print output[0]
 	baselines = []
 	#skip background
 	for label_id in xrange(1, output[0]):
@@ -781,22 +785,23 @@ def pred_to_pts(binary):
 
 	return baselines
 
-def write_baseline_pts(baselines, filename):
+def write_baseline_pts(baselines, filename, scale=4):
 	with open(filename, 'w') as f:
 		for baseline in baselines:
 			baseline_txt = []
 			for pt in baseline:
-				pt_txt = "{},{}".format(*pt)
+				pt_txt = "{},{}".format(pt[0] * scale, pt[1] * scale)
 				baseline_txt.append(pt_txt)
 			f.write(";".join(baseline_txt)+"\n")
 
 
-def write_results(binary, out_txt):
-	baselines = pred_to_pts(binary)
+def write_results(binary, out_txt, simple):
+	baselines = pred_to_pts(binary, simple)
+	print len(baselines)
 	write_baseline_pts(baselines, out_txt)
 	
 
-def main(in_image, in_xml, out_txt, simple):
+def main(in_image, out_txt, simple):
 	print "Loading Image"
 	im = cv2.imread(in_image, cv2.IMREAD_COLOR)
 
@@ -831,7 +836,7 @@ def main(in_image, in_xml, out_txt, simple):
 		cv2.imwrite(out_file, post_processed)
 
 	print "Writing Final Result"
-	write_results(post_processed, out_txt)
+	write_results(post_processed, out_txt, simple)
 
 	print "Done"
 	print "Exiting"
@@ -839,7 +844,7 @@ def main(in_image, in_xml, out_txt, simple):
 
 if __name__ == "__main__":
 	if len(sys.argv) < 3:
-		print "USAGE: python task2.py in_image out_txt [simple|complex] [gpu#] [weights]"
+		print "USAGE: python detect_baselines.py in_image out_txt [simple|complex] [gpu#] [weights]"
 		print "\tin_image is the input image to be labeled"
 		print "\tout_txt is the resulting baseline file"
 		print "\tgpu is an integer device ID to run networks on the specified GPU.  If omitted, CPU mode is used"

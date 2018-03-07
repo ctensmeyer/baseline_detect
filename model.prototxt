@@ -894,5 +894,5 @@ layer {
   name: "baselines_7_prob_0"
   type: "Sigmoid"
   bottom: "Convolution30"
-  top: "Convolution30"
+  top: "prob"
 }
