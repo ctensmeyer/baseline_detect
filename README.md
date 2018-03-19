@@ -22,7 +22,7 @@ For those who don't want to install the dependencies, I have created a docker im
 An example command for the docker container is
 
 ```
-nvidia-docker run -v $HOST_WORK_DIRECTORY:/data tensmeyerc/icdar2017:baseline_detect python detect_baseline.py /data/in_image.png /data/output_file.txt simple 0 
+nvidia-docker run -v $HOST_WORK_DIRECTORY:/data tensmeyerc/icdar2017:baseline_detect python detect_baselines.py /data/in_image.png /data/output_file.txt simple 0 
 ```
 
 `$HOST_WORK_DIRECTORY` is a directory on your machine that is mounted on /data inside of the docker container (using -v).  It's the only way to expose images to the docker container.
